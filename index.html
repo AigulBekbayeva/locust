@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Риск вспышек саранчовых · Казахстан · прогноз до 2030</title>
+<link rel="stylesheet" href="lib/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16202b; --ink2:#3d4b59; --muted:#7a8794;
+  --paper:#f3f1ea; --panel:#fbfaf6; --line:#dcd8cc;
+  --low:#178a7a; --mid:#e0a13c; --high:#bd3b2e;
+  --accent:#178a7a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.5}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif;font-weight:600;letter-spacing:-.01em}
+
+/* header */
+header{padding:32px 28px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+header h1{font-size:clamp(22px,3.2vw,34px);line-height:1.1;max-width:900px}
+header p.sub{color:var(--ink2);margin-top:10px;max-width:760px;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.chip{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:9px 14px;min-width:120px}
+.chip .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.chip .v{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;color:var(--ink);margin-top:2px}
+.chip.good .v{color:var(--low)}
+
+.wrap{max-width:1440px;margin:0 auto;padding:24px 28px 60px}
+.grid2{display:grid;grid-template-columns:1.05fr .95fr;gap:24px}
+@media(max-width:1080px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.card-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.card-h h2{font-size:17px}
+.card-h .note{font-size:12px;color:var(--muted)}
+
+/* map */
+#map{height:520px;width:100%}
+.mapbar{padding:14px 18px;border-top:1px solid var(--line);background:var(--panel)}
+.sliderrow{display:flex;align-items:center;gap:14px}
+.sliderrow input[type=range]{flex:1;accent-color:var(--accent)}
+.yearbadge{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:22px;min-width:118px}
+.yearbadge small{display:block;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.legend{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12px;color:var(--ink2)}
+.gradbar{height:10px;flex:1;border-radius:6px;background:linear-gradient(90deg,var(--low),var(--mid),var(--high))}
+
+/* zone panels */
+.zonegrid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;background:var(--line);padding:0}
+@media(max-width:560px){.zonegrid{grid-template-columns:1fr}}
+.zcell{background:var(--panel);padding:12px 12px 6px}
+.zcell .zh{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.zcell .zname{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:12.5px;line-height:1.15}
+.zcell canvas{width:100%!important;height:96px!important}
+.tag{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.tag.Низкий{background:#e2efec;color:var(--low)}
+.tag.Средний{background:#f6ecd9;color:#a9741d}
+.tag.Высокий{background:#f4e0dc;color:var(--high)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 11px;border:0;background:var(--panel);color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+
+/* methodology */
+.method{margin-top:24px}
+.method-body{padding:20px 22px;font-size:14px;color:var(--ink2)}
+.method-body h3{font-size:14px;color:var(--ink);margin:14px 0 6px;font-family:'Space Grotesk'}
+.method-body p{margin-bottom:8px}
+.method-body .mono{color:var(--ink)}
+.flow{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.step{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:12px}
+.step b{font-family:'JetBrains Mono';font-size:10px;color:var(--accent);display:block;letter-spacing:.08em}
+.foot{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.tt{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-size:11px;padding:5px 8px;border-radius:6px;opacity:0;transition:opacity .12s;font-family:'JetBrains Mono';z-index:1000;white-space:nowrap}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">Агроклиматический риск-мониторинг · Казахстан</div>
+  <h1>Прогноз риска вспышек саранчовых по районам и агроклиматическим зонам</h1>
+  <p class="sub">Нейросетевые модели (LSTM, CNN, гибрид) по 24-месячным окнам климата. Прогноз вспышки как классификация; агрегация до зоны даёт операционно применимое качество. Историческое обучение 2003–2020, проверка 2021–2024, прогноз 2025–2030.</p>
+  <div class="chips" id="chips"></div>
+</header>
+
+<div class="wrap">
+  <div class="grid2">
+    <!-- MAP -->
+    <div class="card">
+      <div class="card-h"><h2>Карта риска по районам</h2><span class="note">цвет = вероятность вспышки</span></div>
+      <div id="map"></div>
+      <div class="mapbar">
+        <div class="sliderrow">
+          <div class="yearbadge"><small id="phase">прогноз</small><span id="yearval">2025</span></div>
+          <input type="range" id="yearslider" min="2021" max="2030" value="2025" step="1">
+        </div>
+        <div class="legend"><span>ниже</span><div class="gradbar"></div><span>выше</span>
+          <span class="mono" style="margin-left:10px">0.0 → 1.0</span></div>
+      </div>
+    </div>
+
+    <!-- ZONES -->
+    <div class="card">
+      <div class="card-h"><h2>Риск по зонам до 2030</h2><div class="seg" id="zmode"><button data-m="risk" class="on">Риск</button><button data-m="num">Численность</button></div></div>
+      <div class="zonegrid" id="zonegrid"></div>
+    </div>
+  </div>
+
+  <!-- METHODOLOGY -->
+  <div class="card method">
+    <div class="card-h"><h2>Как получены данные и метрики</h2><span class="note">научно-технические примечания</span></div>
+    <div class="method-body">
+      <div class="flow">
+        <div class="step"><b>01 источник</b>климат Open-Meteo (ERA5 + проекции), NDVI MODIS</div>
+        <div class="step"><b>02 агрегация</b>дневные → месячные, район × год</div>
+        <div class="step"><b>03 признаки</b>SPI, GDD, аридность, аномалии</div>
+        <div class="step"><b>04 окно</b>24 месяца климата на вход</div>
+        <div class="step"><b>05 метка</b>вспышка = численность ≥ 80-го перцентиля</div>
+        <div class="step"><b>06 модель</b>LSTM · CNN · гибрид (ансамбль)</div>
+        <div class="step"><b>07 агрегация</b>район → зона (p_any)</div>
+      </div>
+      <h3>Почему риск, а не численность</h3>
+      <p>Абсолютную численность по климату спрогнозировать нельзя (R² ≈ 0 на проверке вперёд): вспышки определяются и неклиматическими факторами. Поэтому задача — <span class="mono">классификация риска</span>: превысит ли численность порог.</p>
+      <h3>Как читать метрики</h3>
+      <p><span class="mono">AUC</span>: 0.5 — случайно, 0.7 — приемлемо, <b>0.8 — хорошо</b>, 0.9 — отлично. <span class="mono">PR-AUC</span> сравнивают с базовой долей вспышек: на уровне зоны база ≈ 0.29, а PR-AUC ≈ 0.76 — сигнал в 2.5 раза выше случайного. Обычную «точность» не используем: при редком событии она обманчива.</p>
+      <h3>Уровень района против зоны</h3>
+      <p>На уровне района качество умеренное (AUC ≈ 0.6): отдельные вспышки шумны. Агрегация предсказаний до агроклиматической зоны усредняет шум и поднимает <span class="mono">AUC до ≈ 0.81</span> — это и есть рабочий уровень для раннего предупреждения.</p>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Прогноз вперёд (forward validation) · без утечки из будущего · данные предподсчитаны из ML-пайплайна</span>
+    <span class="mono" id="footmeta"></span>
+  </div>
+</div>
+
+<div class="tt" id="tt"></div>
+
+<script src="lib/leaflet.js"></script>
+<script src="lib/chart.umd.js"></script>
+<script src="districts_geo.js"></script>
+<script src="dashboard_data.js"></script>
+<script>
+// ---- risk color ramp (low teal -> mid amber -> high clay) ----
+function riskColor(v){
+  if(v==null||isNaN(v)) return '#c7c2b6';
+  v=Math.max(0,Math.min(1,v));
+  const stops=[[0.0,[23,138,122]],[0.5,[224,161,60]],[1.0,[189,59,46]]];
+  let a=stops[0],b=stops[2];
+  for(let i=0;i<stops.length-1;i++){ if(v>=stops[i][0]&&v<=stops[i+1][0]){a=stops[i];b=stops[i+1];break;} }
+  const t=(v-a[0])/(b[0]-a[0]||1);
+  const c=a[1].map((x,i)=>Math.round(x+(b[1][i]-x)*t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+// ---- header chips ----
+const chips=[
+  {k:'AUC · зона',v:METRICS.zone_auc,good:true},
+  {k:'PR-AUC · зона',v:METRICS.zone_pr_auc,good:true},
+  {k:'AUC · район',v:METRICS.district_auc},
+  {k:'районов',v:METRICS.n_districts},
+  {k:'зон',v:METRICS.n_zones},
+];
+document.getElementById('chips').innerHTML=chips.map(c=>
+  `<div class="chip ${c.good?'good':''}"><div class="k">${c.k}</div><div class="v">${c.v}</div></div>`).join('');
+document.getElementById('footmeta').textContent=
+  `порог вспышки ${METRICS.outbreak_threshold} · обучение ${METRICS.train_years} · прогноз ${METRICS.forecast_years}`;
+
+// ---- MAP ---- (в try: если тайлы/leaflet недоступны, остальное работает)
+try{
+const map=L.map('map',{scrollWheelZoom:false}).setView([48.3,67.5],5);
+L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+  {attribution:'© OpenStreetMap · CARTO',subdomains:'abcd',maxZoom:9}).addTo(map);
+const tt=document.getElementById('tt');
+const byPcode=Object.fromEntries(DISTRICT_DATA.map(d=>[d.pcode,d]));
+let curYear=document.getElementById('yearslider').value;
+function riskOf(pc,y){const d=byPcode[pc]; if(!d)return null; const r=(d.years[y]||{}).risk; return r==null?null:r;}
+function styleFn(f){const pc=f.properties.ADM2_PCODE; const r=riskOf(pc,curYear);
+  return {fillColor:riskColor(r),fillOpacity:r==null?.25:.82,color:'#fbfaf6',weight:.6};}
+const geoLayer=L.geoJSON(DISTRICTS_GEO,{style:styleFn,
+  onEachFeature:(f,layer)=>{
+    layer.on('mousemove',e=>{const pc=f.properties.ADM2_PCODE;const d=byPcode[pc];const r=riskOf(pc,curYear);
+      tt.style.opacity=1;tt.style.left=(e.originalEvent.pageX+12)+'px';tt.style.top=(e.originalEvent.pageY-10)+'px';
+      tt.textContent=`${d?d.name:pc} · риск ${r!=null?r.toFixed(2):'—'}`;
+      layer.setStyle({weight:2,color:'#16202b'});});
+    layer.on('mouseout',()=>{tt.style.opacity=0;layer.setStyle({weight:.6,color:'#fbfaf6'});});
+  }}).addTo(map);
+map.fitBounds(geoLayer.getBounds(),{padding:[10,10]});
+function paintMap(year){curYear=year;geoLayer.setStyle(styleFn);}
+const slider=document.getElementById('yearslider');
+slider.addEventListener('input',()=>{const y=slider.value;
+  document.getElementById('yearval').textContent=y;
+  document.getElementById('phase').textContent=(+y<=2024)?'проверка':'прогноз';
+  paintMap(y);});
+paintMap(slider.value);
+}catch(e){document.getElementById('map').innerHTML='<div style="padding:24px;color:#7a8794">Карта требует интернет для тайлов. Данные районов доступны в панелях зон.</div>';console.warn(e);}
+
+// ---- ZONE MINI-CHARTS (переключение риск / численность) ----
+const grid=document.getElementById('zonegrid');
+const zcharts=[];
+let ZMODE='risk';
+
+ZONE_DATA.forEach((z,i)=>{
+  const cell=document.createElement('div');cell.className='zcell';
+  cell.innerHTML=`<div class="zh"><span class="zname">${z.zone}</span><span class="tag ${z.group}">${z.group}</span></div><canvas id="zc${i}"></canvas>`;
+  grid.appendChild(cell);
+  const years=Object.keys(z.years).map(Number).sort((a,b)=>a-b);
+  const ch=new Chart(document.getElementById('zc'+i),{type:'line',
+    data:{labels:years,datasets:[]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:true,mode:'index',intersect:false,
+        callbacks:{title:it=>it[0].label,label:c=>c.raw==null?null:`${c.dataset.label}: ${(+c.raw).toFixed(2)}`}}},
+      scales:{y:{min:0,ticks:{font:{size:8}},grid:{color:'#ece8dd'}},
+        x:{ticks:{maxTicksLimit:6,font:{size:8}},grid:{display:false}}}}});
+  zcharts.push({ch,z,years});
+});
+
+function renderZones(){
+  zcharts.forEach(({ch,z,years})=>{
+    let ds;
+    if(ZMODE==='risk'){
+      ds=[
+        {label:'факт',data:years.map(y=>z.years[y].actual??null),borderColor:'#16202b',borderWidth:1.4,pointRadius:0,stepped:true},
+        {label:'риск (тест)',data:years.map(y=>z.years[y].risk_test??null),borderColor:'#2e86c1',borderWidth:1.6,pointRadius:0,spanGaps:false},
+        {label:'риск (прогноз)',data:years.map(y=>z.years[y].risk_fcst??null),borderColor:'#bd3b2e',borderWidth:2,borderDash:[4,3],pointRadius:0,spanGaps:false},
+      ];
+      ch.options.scales.y.max=1; ch.options.scales.y.ticks.stepSize=0.5;
+    } else {
+      ds=[
+        {label:'факт (числ.)',data:years.map(y=>z.years[y].abs??null),borderColor:'#16202b',borderWidth:1.4,pointRadius:0,tension:0},
+        {label:'ожид. (тест)',data:years.map(y=>z.years[y].exp_test??null),borderColor:'#2e86c1',borderWidth:1.6,pointRadius:0,spanGaps:false},
+        {label:'ожид. (прогноз)',data:years.map(y=>z.years[y].exp_fcst??null),borderColor:'#bd3b2e',borderWidth:2,borderDash:[4,3],pointRadius:0,spanGaps:false},
+      ];
+      ch.options.scales.y.max=undefined; ch.options.scales.y.ticks.stepSize=undefined;
+    }
+    ch.data.datasets=ds; ch.update('none');
+  });
+}
+renderZones();
+
+document.getElementById('zmode').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  ZMODE=b.dataset.m;
+  document.querySelectorAll('#zmode button').forEach(x=>x.classList.toggle('on',x===b));
+  renderZones();
+});
+</script>
+</body>
+</html>
