@@ -72,6 +72,28 @@ header p.sub{color:var(--ink2);margin-top:10px;max-width:760px;font-size:15px}
 .step{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:12px}
 .step b{font-family:'JetBrains Mono';font-size:10px;color:var(--accent);display:block;letter-spacing:.08em}
 .foot{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.analytics{padding:16px}
+.agrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:820px){.agrid{grid-template-columns:1fr}}
+.achart{border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:12px 12px 8px}
+.achart h4{font-family:'Space Grotesk';font-size:13px;margin-bottom:8px;color:var(--ink)}
+.achart .cwrap{height:220px;position:relative}
+.achart.tall .cwrap{height:300px}
+.seg.mini button{font-size:10px;padding:3px 8px}
+.hm{display:grid;gap:2px}
+.hm .hlbl{font-size:9.5px;color:var(--ink2);display:flex;align-items:center;padding-right:6px;justify-content:flex-end;text-align:right;line-height:1.05}
+.hm .hcol{font-size:9px;color:var(--muted);text-align:center;transform:rotate(-30deg);transform-origin:center;white-space:nowrap;height:44px;display:flex;align-items:flex-end;justify-content:center}
+.hm .cellv{font-family:'JetBrains Mono';font-size:9px;text-align:center;padding:6px 2px;border-radius:3px;color:#222}
+.gallery{padding:18px}
+.galgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.figcard{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--paper);cursor:zoom-in;transition:transform .12s}
+.figcard:hover{transform:translateY(-2px)}
+.figcard img{width:100%;display:block;background:#fff}
+.figcard .cap{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);padding:7px 10px;border-top:1px solid var(--line);letter-spacing:.05em}
+.lightbox{position:fixed;inset:0;background:rgba(20,32,43,.92);display:none;align-items:center;justify-content:center;z-index:2000;padding:30px;cursor:zoom-out}
+.lightbox.on{display:flex}
+.lightbox img{max-width:95%;max-height:92%;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.lightbox .x{position:absolute;top:18px;right:26px;color:#fff;font-size:30px;font-family:'Space Grotesk';cursor:pointer}
 .tt{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-size:11px;padding:5px 8px;border-radius:6px;opacity:0;transition:opacity .12s;font-family:'JetBrains Mono';z-index:1000;white-space:nowrap}
 </style>
 </head>
@@ -128,6 +150,12 @@ header p.sub{color:var(--ink2);margin-top:10px;max-width:760px;font-size:15px}
     </div>
   </div>
 
+  <!-- INTERACTIVE ANALYTICS -->
+  <div class="card method" style="margin-top:24px">
+    <div class="card-h"><h2>Аналитика данных · интерактивно</h2><span class="note">наведение — значения · построено из исходных файлов</span></div>
+    <div class="analytics"><div class="agrid" id="agrid"></div></div>
+  </div>
+
   <div class="foot">
     <span>Прогноз вперёд (forward validation) · без утечки из будущего · данные предподсчитаны из ML-пайплайна</span>
     <span class="mono" id="footmeta"></span>
@@ -140,6 +168,7 @@ header p.sub{color:var(--ink2);margin-top:10px;max-width:760px;font-size:15px}
 <script src="lib/chart.umd.js"></script>
 <script src="districts_geo.js"></script>
 <script src="dashboard_data.js"></script>
+<script src="analysis_data.js"></script>
 <script>
 // ---- risk color ramp (low teal -> mid amber -> high clay) ----
 function riskColor(v){
@@ -244,6 +273,69 @@ document.getElementById('zmode').addEventListener('click',e=>{
   document.querySelectorAll('#zmode button').forEach(x=>x.classList.toggle('on',x===b));
   renderZones();
 });
+
+// ---- INTERACTIVE ANALYTICS (ключевые графики) ----
+const RC={low:'#178a7a',mid:'#e0a13c',high:'#bd3b2e',ink:'#16202b',blue:'#2e86c1',clay:'#bd3b2e',green:'#6a8f6b'};
+const agrid=document.getElementById('agrid');
+const baseOpts=(extra={})=>({responsive:true,maintainAspectRatio:false,animation:false,
+  plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+  scales:{x:{ticks:{font:{size:9},maxTicksLimit:12},grid:{display:false}},
+          y:{ticks:{font:{size:9}},grid:{color:'#ece8dd'}}},...extra});
+function card(title,tall){const c=document.createElement('div');c.className='achart'+(tall?' tall':'');
+  c.innerHTML=`<h4>${title}</h4><div class="cwrap"><canvas></canvas></div>`;agrid.appendChild(c);return c.querySelector('canvas');}
+function hmcard(title){const c=document.createElement('div');c.className='achart tall';
+  c.innerHTML=`<h4>${title}</h4><div class="hmwrap"></div>`;agrid.appendChild(c);return c.querySelector('.hmwrap');}
+
+// 1. численность по годам
+new Chart(card('Численность по годам'),{type:'line',
+  data:{labels:ANALYSIS.by_year.years,datasets:[
+    {label:'среднее',data:ANALYSIS.by_year.mean,borderColor:RC.blue,borderWidth:1.8,pointRadius:2,tension:.2},
+    {label:'медиана',data:ANALYSIS.by_year.median,borderColor:RC.clay,borderWidth:1.6,borderDash:[4,3],pointRadius:2,tension:.2}]},
+  options:baseOpts({plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:12}}}})});
+
+// 2. связь климата с численностью (Спирмен)
+new Chart(card('Связь климата с численностью · Спирмен',true),{type:'bar',
+  data:{labels:ANALYSIS.climate_corr.labels,datasets:[{data:ANALYSIS.climate_corr.rho,
+    backgroundColor:ANALYSIS.climate_corr.rho.map(v=>v<0?RC.clay:RC.blue)}]},
+  options:baseOpts({indexAxis:'y',scales:{x:{grid:{color:'#ece8dd'},ticks:{font:{size:9}}},y:{ticks:{font:{size:8.5}},grid:{display:false}}}})});
+
+// 3. по зонам
+new Chart(card('Численность по агроклиматическим зонам',true),{type:'bar',
+  data:{labels:ANALYSIS.by_zone.labels,datasets:[{data:ANALYSIS.by_zone.mean,backgroundColor:RC.low}]},
+  options:baseOpts({indexAxis:'y',scales:{x:{grid:{color:'#ece8dd'},ticks:{font:{size:9}}},y:{ticks:{font:{size:8.5}},grid:{display:false}}}})});
+
+// 4. годовые аномалии
+new Chart(card('Годовые аномалии: численность и климат'),{type:'line',
+  data:{labels:ANALYSIS.anomalies.years,datasets:[
+    {label:'численность',data:ANALYSIS.anomalies.number,borderColor:RC.ink,borderWidth:2,pointRadius:2},
+    {label:'температура',data:ANALYSIS.anomalies.temp,borderColor:RC.clay,borderWidth:1.4,borderDash:[4,3],pointRadius:0},
+    {label:'влажн. почвы',data:ANALYSIS.anomalies.soil,borderColor:RC.blue,borderWidth:1.4,borderDash:[4,3],pointRadius:0}]},
+  options:baseOpts({plugins:{legend:{display:true,labels:{font:{size:9},boxWidth:10}}}})});
+
+// heatmap builder
+function drawHeat(wrap,rows,cols,vals,diverging,vmin,vmax){
+  function col(v){if(v==null)return '#eee';
+    if(diverging){const t=Math.max(-1,Math.min(1,v/(vmax||0.4)));
+      if(t<0)return `rgba(46,134,193,${Math.abs(t)*.85+.1})`;return `rgba(189,59,46,${t*.85+.1})`;}
+    const t=(v-vmin)/((vmax-vmin)||1);return riskColor(t);}
+  const g=document.createElement('div');g.className='hm';
+  g.style.gridTemplateColumns=`120px repeat(${cols.length},1fr)`;
+  g.appendChild(document.createElement('div'));
+  cols.forEach(c=>{const d=document.createElement('div');d.className='hcol';d.textContent=c;g.appendChild(d);});
+  rows.forEach((rn,i)=>{const lb=document.createElement('div');lb.className='hlbl';lb.textContent=rn;g.appendChild(lb);
+    cols.forEach((_,j)=>{const v=vals[i][j];const d=document.createElement('div');d.className='cellv';
+      d.style.background=col(v);d.textContent=v==null?'':v.toFixed(2);
+      d.style.color=(v!=null&&Math.abs(diverging?v:(v-vmin)/((vmax-vmin)||1))>0.6)?'#fff':'#222';
+      d.title=`${rn} · ${cols[j]}: ${v==null?'—':v}`;g.appendChild(d);});});
+  wrap.appendChild(g);
+}
+// 5. зона × сезон
+const zsvals=ANALYSIS.zone_season.values.flat().filter(v=>v!=null);
+drawHeat(hmcard('Зона × сезон · log1p численности'),ANALYSIS.zone_season.zones,ANALYSIS.zone_season.seasons,
+  ANALYSIS.zone_season.values,false,Math.min(...zsvals),Math.max(...zsvals));
+// 6. корреляция климат↔численность по зонам
+drawHeat(hmcard('Корреляция климат↔численность по зонам'),ANALYSIS.zone_climate_corr.zones,ANALYSIS.zone_climate_corr.vars,
+  ANALYSIS.zone_climate_corr.values,true,-0.4,0.4);
 </script>
 </body>
 </html>
